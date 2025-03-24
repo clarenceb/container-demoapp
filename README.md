@@ -1,21 +1,42 @@
-# Container demo app
+# .NET 8 Container Demo App
+
+Basic introduction to containering a .NET 8+ app.
+
+Will cover:
+
+- Creating a sample .NET 8 web app
+- Build and test locally
+- Containerising with Draft
+- Publishing a container image to Azure Container Registry (ACR)
+- Deploying to target service (ACA, AKS)
+- Next steps
+
+ACA only:
+- Deploying from code to Azure Container Apps
+- Deploying from image to Azure Container Apps
+- Monitoring, metrics, logging basics
+
+AKS only:
+- Creating a Helm Chart
+- Publishing a Helm Chart to Azure Container Registry (ACR)
+- Deploying from Helm Chart to AKS Automatic
+- Monitoring, metrics, logging basics with Azure Monitor (Container Insights and Metrics add-on)
 
 ## Create project and test locally
 
 ```sh
-echo -e "bin/\nobj/\n" > .gitignore
-
-dotnet new blazor -n demoapp
+dotnet new webapp -n demoapp
 
 cd demoapp/
+echo -e "bin/\nobj/\n" > .gitignore
 dotnet run
 ```
 
 ## Create Dockerfile and test in Docker Desktop
 
-```sh
-# https://github.com/Azure/draft
+Download `draft` from: https://github.com/Azure/draft
 
+```sh
 draft create --dockerfile-only
 
 docker build -t demoapp:1.0.0 .
@@ -26,13 +47,9 @@ docker run -d demoapp:1.0.0 -p 8080:80
 docker inspect demoapp:1.0.0
 ```
 
-## (Optional) If using arm64 nodes in AKS
+## Create an Azure Container Apps Environment
 
-```sh
-docker build --platform linux/arm64 -t demoappcbxacr.azurecr.io/demoapp:1.0.0-arm64 .
-docker tag demoapp:1.0.0-arm64 demoappcbxacr.azurecr.io/demoapp:1.0.0-arm64
-docker push demoappcbxacr.azurecr.io/demoapp:1.0.0-arm64
-```
+## Create an AKS Automatic Cluster
 
 ## Push image to Azure Container Registry
 
