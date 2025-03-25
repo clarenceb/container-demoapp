@@ -38,11 +38,12 @@ Download `draft` from: https://github.com/Azure/draft
 
 ```sh
 draft create --dockerfile-only
+# update dotnet version base image tag to 8.0
 
 docker build -t demoapp:1.0.0 .
 
 docker image ls
-docker run -d demoapp:1.0.0 -p 8080:80
+docker run -d -p 8080:80 demoapp:1.0.0
 
 docker inspect demoapp:1.0.0
 ```
