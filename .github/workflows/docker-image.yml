@@ -30,14 +30,8 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          env
-          echo "Logging in to ACR"
-          echo "1. ACR_NAME= $ACR_NAME"
-          echo "2. ACR_NAME= %ACR_NAME%"
-          echo "3. ACR_NAME= $ACR_NAME"
-          echo "4. acr_name= %acr_name%"
-          echo "5. env.ACR_NAME= ${{ secrets.ACR_NAME }}"
-          az acr login -n ${{ secrets.ACR_NAME }}
+          TOKEN=$(az acr login -n ${{ secrets.ACR_NAME }} --expose-token --output tsv --query accessToken)
+          echo "##vso[task.setvariable variable=DOCKER_AUTH_CONFIG;isOutput=true]$(echo $TOKEN | docker login ${{ secrets.ACR_REGISTRY_SERVER }} --username ${{ secrets.ACR_NAME }} --password-stdin)"
 
     - name: Build and push
       uses: docker/build-push-action@v6
