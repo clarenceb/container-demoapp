@@ -1,0 +1,55 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    # checkout the repo
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@main
+      
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Build and publish container image
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          docker build . -t ${{ secrets.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
+          docker push ${{ secrets.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
+
+    - name: Deploy or update container app
+      uses: azure/cli@v2
+      with:
+        azcliversion: latest
+        inlineScript: |
+          az containerapp show --name my-container-app --resource-group $RG_NAME
+
+          if [ $? -eq 0 ]; then
+            az containerapp update -n my-container-app -g $RG_NAME \
+              --image ${{ secrets.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
+          else
+            az containerapp create \
+              --name my-container-app \
+              --resource-group $RG_NAME \
+              --environment $AZURE_CONTAINER_ENVIRONMENT_NAME \
+              --image ${{ secrets.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }} \
+              --target-port 80 \
+              --ingress external \
+              --query properties.configuration.ingress.fqdn \
+              --user-assigned $ACA_IDENTITY_ID \
+              --registry-identity $ACA_IDENTITY_ID \
+              --registry-server $ACR_REGISTRY_SERVER
+          fi
