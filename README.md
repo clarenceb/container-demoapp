@@ -185,6 +185,11 @@ Create `creds.json` with these fields (using info from `azure-credentials.json`)
 
 Add contents of `creds.json` to GitHub Actions Secret `AZURE_CREDENTIALS`.
 
+Grant push access:
+
+```sh
+az role assignment create --role "AcrPush" --assignee <clientId> --scope /subscriptions/$SUB_ID/resourceGroups/demoapp/providers/Microsoft.ContainerRegistry/registries/$ACR_NAME
+```
 
 # AKS only (TODO)
 
