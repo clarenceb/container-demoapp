@@ -172,7 +172,18 @@ az ad sp create-for-rbac \
   --scopes /subscriptions/$SUB_ID/resourceGroups/$RG_NAME > azure-credentials.json
 ```
 
-Add contents of `azure-credentials.json` to GitHub Actions Secret `AZURE_CREDENTIALS`.
+Create `creds.json` with these fields (using info from `azure-credentials.json`):
+
+```json
+{
+    "clientSecret":  "******",
+    "subscriptionId":  "******",
+    "tenantId":  "******",
+    "clientId":  "******"
+}
+```
+
+Add contents of `creds.json` to GitHub Actions Secret `AZURE_CREDENTIALS`.
 
 
 # AKS only (TODO)
