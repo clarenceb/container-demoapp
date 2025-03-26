@@ -12,9 +12,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env: 
-      ACR_NAME: ${{ env.ACR_NAME }}
-
     steps:
     # checkout the repo
     - name: 'Checkout GitHub Action'
