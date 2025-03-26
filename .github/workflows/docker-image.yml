@@ -22,16 +22,15 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Set up Docker
+      uses: docker/setup-docker-action@v4
 
     - name: ACR Login
       uses: azure/cli@v2
       with:
         azcliversion: latest
         inlineScript: |
-          TOKEN=$(az acr login -n ${{ secrets.ACR_NAME }} --expose-token --output tsv --query accessToken)
-          echo "##vso[task.setvariable variable=DOCKER_AUTH_CONFIG;isOutput=true]$(echo $TOKEN | docker login ${{ secrets.ACR_REGISTRY_SERVER }} --username ${{ secrets.ACR_NAME }} --password-stdin)"
+          az acr login -n ${{ secrets.ACR_NAME }}
 
     - name: Build and push
       uses: docker/build-push-action@v6
