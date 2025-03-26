@@ -27,6 +27,11 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          echo "Logging in to ACR"
+          echo "ACR_NAME= $ACR_NAME"
+          echo "ACR_NAME= %ACR_NAME%"
+          echo "acr_name= %acr_name%"
+          echo "env.ACR_NAME= ${{ env.ACR_NAME }}"
           az acr login -n $ACR_NAME
       env:
         ACR_NAME: ${{ env.ACR_NAME }}
