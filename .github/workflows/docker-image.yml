@@ -41,9 +41,12 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          set +e
           az containerapp show --name my-container-app --resource-group ${{ secrets.RG_NAME }}
+          EXISTS=$?
+          set -e
 
-          if [ $? -eq 0 ]; then
+          if [ $EXISTS -eq 0 ]; then
             az containerapp update -n my-container-app -g ${{ secrets.RG_NAME }} \
               --image ${{ secrets.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
           else
