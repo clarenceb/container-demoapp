@@ -27,7 +27,7 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az acr login --name ${{ env.ACR_NAME }}
+          az acr login -n ${{ env.ACR_NAME }} -g ${{ env.RG_NAME }}
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -43,21 +43,21 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az containerapp show --name my-container-app --resource-group $RG_NAME
+          az containerapp show --name my-container-app --resource-group ${{ env.RG_NAME }}
 
           if [ $? -eq 0 ]; then
-            az containerapp update -n my-container-app -g $RG_NAME \
+            az containerapp update -n my-container-app -g ${{ env.RG_NAME }} \
               --image ${{ env.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
           else
             az containerapp create \
               --name my-container-app \
-              --resource-group $RG_NAME \
-              --environment $AZURE_CONTAINER_ENVIRONMENT_NAME \
+              --resource-group ${{ env.RG_NAME }} \
+              --environment ${{ env.AZURE_CONTAINER_ENVIRONMENT_NAME }} \
               --image ${{ env.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }} \
               --target-port 80 \
               --ingress external \
               --query properties.configuration.ingress.fqdn \
-              --user-assigned $ACA_IDENTITY_ID \
-              --registry-identity $ACA_IDENTITY_ID \
-              --registry-server $ACR_REGISTRY_SERVER
+              --user-assigned ${{ secrets.ACA_IDENTITY_ID }} \
+              --registry-identity ${{ secrets.ACA_IDENTITY_ID }} \
+              --registry-server ${{ env.ACR_REGISTRY_SERVER }}
           fi
