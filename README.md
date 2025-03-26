@@ -93,13 +93,18 @@ az containerapp create \
     --name my-container-app \
     --resource-group $RG_NAME \
     --environment $AZURE_CONTAINER_ENVIRONMENT_NAME \
-    --image $ACR_REGISTRY_SERVER/demoapp:1.0.0 \
+    --image $ACR_REGISTRY_SERVER/demoapp:1.0.1 \
     --target-port 80 \
     --ingress external \
     --query properties.configuration.ingress.fqdn \
     --user-assigned $ACA_IDENTITY_ID \
     --registry-identity $ACA_IDENTITY_ID \
     --registry-server $ACR_REGISTRY_SERVER
+
+# or update existing app to use new image version
+
+az containerapp update -n my-container-app -g $RG_NAME \
+            --image $ACR_REGISTRY_SERVER/demoapp:1.0.1
 ```
 
 ## ACA: Monitoring, metrics, logging basics
@@ -143,6 +148,7 @@ az monitor log-analytics query \
 ```
 
 ### Metrics
+
 Select the Container app.
 
 Try:
@@ -155,39 +161,19 @@ See [Collect and read OpenTelemetry data in Azure Container Apps](https://learn.
 
 See [infra/core/host/container-apps-environment.bicep](infra/core/host/container-apps-environment.bicep) line 23.
 
-# AKS only
+# AKS only (TODO)
+
+- Create an AKS Automatic Cluster
 - Creating a Helm Chart
 - Publishing a Helm Chart to Azure Container Registry (ACR)
 - Deploying from Helm Chart to AKS Automatic
 - Monitoring, metrics, logging basics with Azure Monitor (Container Insights and Metrics add-on)
 
-## Create an AKS Automatic Cluster
-
-## Deploy app to Azure Kubernetes Service
-
-```sh
-# Switch to AKS cluster
-kubectl ctx aks-frankbuzzard56
-kubectl get node -o wide
-
-# Setup
-az aks update -n aks-frankbuzzard56 -g rg-aks-store-demo --attach-acr demoappcbxacr
-
-# Demo demo app
-draft create
-kubectl create ns demoapp
-kubectl label namespace demoapp istio.io/rev=asm-1-23
-# Change service from LoabBalancer to ClusterIP
-cp ../manifests-backup/manifests-backup/gateways-istio.yaml manifests/
-kubectl apply -f manifests/
-```
-
-Examine AKS cluster in the Azure Portal.
-
 ## Cleanup
 
 ```sh
-kubectl delete ns demoapp
+az containerapp delete --name my-container-app --resource-group $RG_NAME
 
-az containerapp delete --name my-container-app --resource-group mydemoapp
+# Delete everything
+az group delete -n $RG_NAME
 ```
