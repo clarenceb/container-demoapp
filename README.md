@@ -8,11 +8,10 @@ Will cover:
 - Build and test locally
 - Containerising with Draft
 - Publishing a container image to Azure Container Registry (ACR)
-- Deploying to target service (ACA, AKS)
+- Deploying to target service (ACA, AKS) - see below
 - Next steps
 
 ACA only:
-- Deploying from code to Azure Container Apps
 - Deploying from image to Azure Container Apps
 - Monitoring, metrics, logging basics
 
@@ -21,6 +20,28 @@ AKS only:
 - Publishing a Helm Chart to Azure Container Registry (ACR)
 - Deploying from Helm Chart to AKS Automatic
 - Monitoring, metrics, logging basics with Azure Monitor (Container Insights and Metrics add-on)
+
+# Pre-requisites
+
+```sh
+az extension add --name containerapp --upgrade --allow-preview true
+az provider register --namespace Microsoft.App --wait
+az provider register --namespace Microsoft.OperationalInsights --wait
+
+az login
+```
+
+## Deploy Azure Resources for later steps
+
+Only the base resources will be created wth Bicep.  The images and containers will be managed using Azure CLI.
+
+```sh
+RG_NAME=demoapp
+LOCATION=australiaeast
+
+az group create -n $RG_NAME -l $LOCATION
+az deployment group create -g $RG_NAME --template-file ./infra/main.bicep --parameters @./infra/main.parameters.json
+```
 
 ## Create project and test locally
 
@@ -48,51 +69,99 @@ docker run -d -p 8080:80 demoapp:1.0.0
 docker inspect demoapp:1.0.0
 ```
 
-## Create an Azure Container Apps Environment
-
-## Create an AKS Automatic Cluster
-
 ## Push image to Azure Container Registry
 
 ```sh
-# Setup
-az group create -n mydemoapp -l australiaeast
-az acr create -n demoappcbxacr -g mydemoapp --sku Standard
-az acr login -n demoappcbxacr -g mydemoapp
+# Login to the ACR to be able to push images
+ACR_NAME="$(az deployment group show -g $RG_NAME -n main --query properties.outputs.azurE_CONTAINER_REGISTRY_NAME.value -o tsv)"
+ACR_REGISTRY_SERVER="$(az deployment group show -g $RG_NAME -n main --query properties.outputs.azurE_CONTAINER_REGISTRY_ENDPOINT.value -o tsv)"
+
+az acr login -n $ACR_NAME -g $RG_NAME
 
 # Tag and push imager to ACR
-docker tag demoapp:1.0.0 demoappcbxacr.azurecr.io/demoapp:1.0.0
-docker push demoappcbxacr.azurecr.io/demoapp:1.0.0
+docker tag demoapp:1.0.0 $ACR_REGISTRY_SERVER/demoapp:1.0.0
+docker push $ACR_REGISTRY_SERVER/demoapp:1.0.0
 ```
 
-## Deploy app to Container Apps
+## ACA: Deploying from image to Azure Container Apps
 
 ```sh
-# Setup - managed identity foir ACR, Log Analytics for logs and metrics
-LA_CUSTOMER_ID=$(az monitor log-analytics workspace create --name mydemoapplwcbx --resource-group mydemoapp --query customerId -o tsv)
-az containerapp env create --name mycontainerappenv --resource-group mydemoapp --location australiaeast --logs-destination log-analytics --logs-workspace-id $LA_CUSTOMER_ID
-IDENTITY="demoappacr-umi"
-az identity create --name $IDENTITY --resource-group mydemoapp
-IDENTITY_CLIENT_ID=$(az identity show -n $IDENTITY -g mydemoapp --query clientId -o tsv)
-IDENTITY_RESOURCE_ID=$(az identity show -n $IDENTITY -g mydemoapp --query id -o tsv)
-ACR_RESOURCE_ID=$(az acr show -n demoappcbxacr -g mydemoapp --query id -o tsv)
-az role assignment create --role "AcrPull" --assignee $IDENTITY_CLIENT_ID --scope $ACR_RESOURCE_ID
+AZURE_CONTAINER_ENVIRONMENT_NAME="$(az deployment group show -g $RG_NAME -n main --query properties.outputs.azurE_CONTAINER_ENVIRONMENT_NAME.value -o tsv)"
+ACA_IDENTITY_ID="$(az deployment group show -g $RG_NAME -n main --query properties.outputs.acA_IDENTITY_ID.value -o tsv)"
 
-# Deploy the container to Azure Container Apps
 az containerapp create \
     --name my-container-app \
-    --resource-group mydemoapp \
-    --environment mycontainerappenv \
-    --image demoappcbxacr.azurecr.io/demoapp:1.0.0 \
+    --resource-group $RG_NAME \
+    --environment $AZURE_CONTAINER_ENVIRONMENT_NAME \
+    --image $ACR_REGISTRY_SERVER/demoapp:1.0.0 \
     --target-port 80 \
     --ingress external \
     --query properties.configuration.ingress.fqdn \
-    --user-assigned $IDENTITY_RESOURCE_ID \
-    --registry-identity $IDENTITY_RESOURCE_ID \
-    --registry-server demoappcbxacr.azurecr.io
+    --user-assigned $ACA_IDENTITY_ID \
+    --registry-identity $ACA_IDENTITY_ID \
+    --registry-server $ACR_REGISTRY_SERVER
 ```
 
-Examine container apps env and container app in the Azure Portal.
+## ACA: Monitoring, metrics, logging basics
+
+### Console
+
+Connect to console (`/bin/sh`):
+
+```sh
+su
+# List processes
+ls -l /proc/*/exe
+for prc in /proc/*/cmdline; { (printf "$prc "; cat -A "$prc") | sed 's/\^@/ /g;s|/proc/||;s|/cmdline||'; echo; }
+# List app files
+cd /app
+ls -al
+```
+
+### Debug Console
+
+See [built-in tools](https://learn.microsoft.com/en-us/azure/container-apps/container-debug-console?tabs=bash#built-in-tools-in-debug-console)
+
+```sh
+ps -ef
+```
+
+### Logs
+
+Select the Container app.
+
+View:
+- Log Streaming
+- Logs (tables: `ContainerAppSystemLogs_CL`, `ContainerAppConsoleLogs_CL`)
+
+```sh
+WORKSPACE_ID="$(az monitor log-analytics workspace list --query [0].customerId -o tsv)"
+az monitor log-analytics query \
+  --workspace $WORKSPACE_ID \
+    --analytics-query "ContainerAppConsoleLogs_CL | where ContainerAppName_s contains 'my-container-app' | where TimeGenerated >= ago(30m) | project ContainerAppName_s, Log_s, TimeGenerated | order by TimeGenerated desc | take 20" \
+  --out table
+```
+
+### Metrics
+Select the Container app.
+
+Try:
+- Average Response Time (preview), Sum, Last 1 hour
+- CPU Usage, Avg, Last 1 hour
+
+### OTel endpoints to Application Insights (Traces and Logs only)
+
+See [Collect and read OpenTelemetry data in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/opentelemetry-agents?tabs=arm%2Carm-example)
+
+See [infra/core/host/container-apps-environment.bicep](infra/core/host/container-apps-environment.bicep) line 23.
+
+# AKS only
+- Creating a Helm Chart
+- Publishing a Helm Chart to Azure Container Registry (ACR)
+- Deploying from Helm Chart to AKS Automatic
+- Monitoring, metrics, logging basics with Azure Monitor (Container Insights and Metrics add-on)
+
+## Create an AKS Automatic Cluster
 
 ## Deploy app to Azure Kubernetes Service
 
@@ -121,14 +190,4 @@ Examine AKS cluster in the Azure Portal.
 kubectl delete ns demoapp
 
 az containerapp delete --name my-container-app --resource-group mydemoapp
-```
-
-## Other Demos
-
-* ARO - ARO Pet Store Demo
-
-```sh
-oc login https://api.tm7msl4ly3768bc802.australiaeast.aroapp.io:6443/ -u kubeadmin -p $(az aro list-credentials -g aro-demos -n arodemoscbx | jq -r ".kubeadminPassword")
-
-oc get route -A | grep store
 ```
