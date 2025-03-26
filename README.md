@@ -104,7 +104,7 @@ az containerapp create \
 # or update existing app to use new image version
 
 az containerapp update -n my-container-app -g $RG_NAME \
-            --image $ACR_REGISTRY_SERVER/demoapp:1.0.1
+  --image $ACR_REGISTRY_SERVER/demoapp:1.0.1
 ```
 
 ## ACA: Monitoring, metrics, logging basics
@@ -160,6 +160,20 @@ Try:
 See [Collect and read OpenTelemetry data in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/opentelemetry-agents?tabs=arm%2Carm-example)
 
 See [infra/core/host/container-apps-environment.bicep](infra/core/host/container-apps-environment.bicep) line 23.
+
+## ACA: CI/CD
+
+```sh
+SUB_ID="$(az account show --query id -o tsv)"
+
+az ad sp create-for-rbac \
+  --name github-actions-demoapp \
+  --role "contributor" \
+  --scopes /subscriptions/$SUB_ID/resourceGroups/$RG_NAME > azure-credentials.json
+```
+
+Add contents of `azure-credentials.json` to GitHub Actions Secret `AZURE_CREDENTIALS`.
+
 
 # AKS only (TODO)
 
