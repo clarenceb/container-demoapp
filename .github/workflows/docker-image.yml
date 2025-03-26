@@ -12,6 +12,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    env: 
+      ACR_NAME: ${{ env.ACR_NAME }}
+
     steps:
     # checkout the repo
     - name: 'Checkout GitHub Action'
@@ -27,6 +30,7 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
+          env
           echo "Logging in to ACR"
           echo "1. ACR_NAME= $ACR_NAME"
           echo "2. ACR_NAME= %ACR_NAME%"
