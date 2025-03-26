@@ -27,10 +27,9 @@ jobs:
       with:
         azcliversion: latest
         inlineScript: |
-          az acr login -n $ACR_NAME -g $RG_NAME
+          az acr login -n $ACR_NAME
       env:
         ACR_NAME: ${{ env.ACR_NAME }}
-        RG_NAME: ${{ env.RG_NAME }}  
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -38,6 +37,7 @@ jobs:
     - name: Build and push
       uses: docker/build-push-action@v6
       with:
+        context: demoapp
         push: true
         tags: ${{ env.ACR_REGISTRY_SERVER }}/demoapp:${{ github.sha }}
 
