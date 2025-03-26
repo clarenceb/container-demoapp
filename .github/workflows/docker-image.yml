@@ -22,6 +22,9 @@ jobs:
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: ACR Login
       uses: azure/cli@v2
       with:
@@ -35,9 +38,6 @@ jobs:
           echo "4. acr_name= %acr_name%"
           echo "5. env.ACR_NAME= ${{ secrets.ACR_NAME }}"
           az acr login -n ${{ secrets.ACR_NAME }}
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
 
     - name: Build and push
       uses: docker/build-push-action@v6
