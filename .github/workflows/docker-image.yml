@@ -1,4 +1,4 @@
-name: Containewr App CI/CD
+name: Container App CI/CD
 
 on:
   push:
@@ -28,10 +28,11 @@ jobs:
         azcliversion: latest
         inlineScript: |
           echo "Logging in to ACR"
-          echo "ACR_NAME= $ACR_NAME"
-          echo "ACR_NAME= %ACR_NAME%"
-          echo "acr_name= %acr_name%"
-          echo "env.ACR_NAME= ${{ env.ACR_NAME }}"
+          echo "1. ACR_NAME= $ACR_NAME"
+          echo "2. ACR_NAME= %ACR_NAME%"
+          echo "3. ACR_NAME= $ACR_NAME"
+          echo "4. acr_name= %acr_name%"
+          echo "5. env.ACR_NAME= ${{ env.ACR_NAME }}"
           az acr login -n $ACR_NAME
       env:
         ACR_NAME: ${{ env.ACR_NAME }}
